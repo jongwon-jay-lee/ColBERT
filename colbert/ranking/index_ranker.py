@@ -90,7 +90,7 @@ class IndexRanker():
                 mask = mask.unsqueeze(0) <= group_doclens.to(DEVICE).unsqueeze(-1)
 
                 scores = (D @ group_Q) * mask.unsqueeze(-1)
-                scores = self.colbert.reduce_matrix(scores, doc_dim=1)
+                scores = scores.max(1).values.sum(-1).cpu()
 
                 output_pids.append(group_pids)
                 output_scores.append(scores)
