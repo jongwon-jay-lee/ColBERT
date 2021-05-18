@@ -86,8 +86,8 @@ def index_faiss(args):
 
         assert not os.path.exists(output_path), output_path
 
-        faiss_nbytes = 64 if args.single_vector else 16
-        faiss_similarity = 'ip' if args.single_vector else 'l2'
+        faiss_nbytes = 16
+        faiss_similarity = 'l2'
         index = prepare_faiss_index(slice_samples_paths, args.partitions, args.sample,
                                     nbytes=faiss_nbytes, similarity=faiss_similarity)
 
