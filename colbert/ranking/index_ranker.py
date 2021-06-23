@@ -8,7 +8,9 @@ from itertools import accumulate
 from colbert.parameters import DEVICE
 from colbert.utils.utils import print_message, dotdict, flatten
 
-BSIZE = 1 << 14
+# BSIZE = 1 << 14
+# TODO: tmp code
+BSIZE = 1 << 9
 
 
 class IndexRanker():
@@ -45,7 +47,8 @@ class IndexRanker():
 
     def _create_buffers(self, max_bsize, dtype, devices):
         buffers = {}
-
+        for stride in self.strides:
+            print(f"max_bsize: {max_bsize}, stride: {stride}, dim: {self.dim}")
         for device in devices:
             buffers[device] = [torch.zeros(max_bsize, stride, self.dim, dtype=dtype,
                                            device=device, pin_memory=(device == 'cpu'))

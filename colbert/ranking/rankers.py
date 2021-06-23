@@ -26,8 +26,8 @@ class Ranker():
         return Q
 
     def rank(self, Q, pids=None):
+        # retrieve relative passages
         pids = self.retrieve(Q, verbose=False)[0] if pids is None else pids
-
         assert type(pids) in [list, tuple], type(pids)
         assert Q.size(0) == 1, (len(pids), Q.size())
         assert all(type(pid) is int for pid in pids)

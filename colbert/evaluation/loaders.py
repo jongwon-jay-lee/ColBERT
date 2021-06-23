@@ -17,7 +17,7 @@ def load_queries(queries_path):
 
     print_message("#> Loading the queries from", queries_path, "...")
 
-    with open(queries_path) as f:
+    with open(queries_path, "r", encoding="utf-8") as f:
         for line in f:
             qid, query, *_ = line.strip().split('\t')
             qid = int(qid)
@@ -172,6 +172,30 @@ def load_collection(collection_path):
     print()
 
     return collection
+
+
+def load_collection_dict(collection_path):
+    print_message("#> Loading collection...")
+
+    collection_dict = {}
+
+    with open(collection_path, "r", encoding="utf-8") as f:
+        for line_idx, line in enumerate(f):
+            if line_idx % (1000*1000) == 0:
+                print(f'{line_idx // 1000 // 1000}M', end=' ', flush=True)
+
+            pid, passage, *rest = line.strip().split('\t')
+            assert pid == 'id' or int(pid) == line_idx
+
+            if len(rest) >= 1:
+                title = rest[0]
+                passage = title + ' | ' + passage
+
+            collection_dict[pid] = passage
+
+    print()
+
+    return collection_dict
 
 
 def load_colbert(args, do_print=True):

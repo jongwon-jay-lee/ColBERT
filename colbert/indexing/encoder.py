@@ -42,7 +42,7 @@ class CollectionEncoder():
         self.iterator = self._initialize_iterator()
 
     def _initialize_iterator(self):
-        return open(self.collection)
+        return open(self.collection, "r", encoding="utf-8")
 
     def _saver_thread(self):
         for args in iter(self.saver_queue.get, None):
@@ -175,7 +175,10 @@ class CollectionEncoder():
 
 
 def compute_throughput(size, t0, t1):
-    throughput = size / (t1 - t0) * 60
+    t_diff = t1 - t0
+    if t_diff == 0.0:
+        t_diff = 1e-6
+    throughput = size / t_diff * 60
 
     if throughput > 1000 * 1000:
         throughput = throughput / (1000*1000)

@@ -5,6 +5,7 @@ import random
 import torch
 import itertools
 
+from colbert.reading.extractive_reader import load_model, extractive_answer
 from colbert.utils.runs import Run
 from multiprocessing import Pool
 from colbert.modeling.inference import ModelInference
@@ -14,7 +15,7 @@ from colbert.utils.utils import print_message, batch
 from colbert.ranking.rankers import Ranker
 
 
-def retrieve(args):
+def read(args):
     # load colbert model and ready query/passage tokenizers
     inference = ModelInference(args.colbert, amp=args.amp)
     ranker = Ranker(args, inference, faiss_depth=args.faiss_depth)
@@ -30,6 +31,7 @@ def retrieve(args):
             qbatch_text = [queries[qid] for qid in qbatch]
 
             rankings = []
+            rankings_for_qa = []
 
             for query_idx, q in enumerate(qbatch_text):
                 torch.cuda.synchronize('cuda:0')
@@ -45,7 +47,11 @@ def retrieve(args):
                     print(qoffset+query_idx, q, len(scores), len(pids), scores[0], pids[0],
                           milliseconds / (qoffset+query_idx+1), 'ms')
 
-                rankings.append(zip(pids, scores))
+                # rankings.append(zip(pids, scores))
+                rank_zip = zip(pids, scores)
+                ranking, ranking_qa = itertools.tee(rank_zip)
+                rankings.append(ranking)
+                rankings_for_qa.append(ranking_qa)
 
             for query_idx, (qid, ranking) in enumerate(zip(qbatch, rankings)):
                 query_idx = qoffset + query_idx
@@ -55,6 +61,16 @@ def retrieve(args):
 
                 ranking = [(score, pid, None) for pid, score in itertools.islice(ranking, args.depth)]
                 rlogger.log(qid, ranking, is_ranked=True)
+
+            # reader
+            reader_model, reader_tokenizer = load_model(args)
+            for i, (qid, ranking_qa) in enumerate(zip(qbatch, rankings_for_qa)):
+                for j, (pid, score) in enumerate(itertools.islice(ranking_qa, args.top_n_psg)):
+                    if qid in args.queries and str(pid) in args.collection_dict:
+                        question = args.queries[qid]
+                        passage = args.collection_dict[str(pid)]
+                        # print(i, score, pid, passage)
+                        extractive_answer(question, passage, reader_model, reader_tokenizer)
 
     print('\n\n')
     print(ranking_logger.filename)

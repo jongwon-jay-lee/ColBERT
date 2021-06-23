@@ -4,9 +4,9 @@ import random
 from colbert.utils.parser import Arguments
 from colbert.utils.runs import Run
 
-from colbert.evaluation.loaders import load_colbert, load_qrels, load_queries
+from colbert.evaluation.loaders import load_colbert, load_qrels, load_queries, load_collection_dict
 from colbert.indexing.faiss import get_faiss_index_name
-from colbert.ranking.retrieval import retrieve
+from colbert.reading.reader import read
 from colbert.ranking.batch_retrieval import batch_retrieve
 
 
@@ -25,10 +25,14 @@ def main():
     parser.add_argument('--part-range', dest='part_range', default=None, type=str)
     parser.add_argument('--batch', dest='batch', default=False, action='store_true')
     parser.add_argument('--depth', dest='depth', default=1000, type=int)
+    parser.add_argument("--top_n_psg", dest="top_n_psg", default=10, type=int,)
 
     args = parser.parse()
 
     args.depth = args.depth if args.depth > 0 else None
+
+    if args.collection is not None:
+        args.collection_dict = load_collection_dict(args.collection)
 
     if args.part_range:
         part_offset, part_endpos = map(int, args.part_range.split('..'))
@@ -51,7 +55,7 @@ def main():
         if args.batch:
             batch_retrieve(args)
         else:
-            retrieve(args)
+            read(args)
 
 
 if __name__ == "__main__":
