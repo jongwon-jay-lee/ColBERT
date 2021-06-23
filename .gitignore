@@ -13,3 +13,11 @@ __pycache__/
 
 # mac
 .DS_Store
+
+# outputs
+indexes
+retrieval_outputs
+mlruns
+
+# shell
+*.sh
