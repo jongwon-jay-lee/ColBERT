@@ -5,7 +5,7 @@ import random
 import torch
 import itertools
 
-from colbert.reading.extractive_reader import load_model, extractive_answer
+from colbert.reading.extractive_reader import load_extractive_reader, extractive_answer
 from colbert.utils.runs import Run
 from multiprocessing import Pool
 from colbert.modeling.inference import ModelInference
@@ -70,7 +70,13 @@ def read(args):
                         question = args.queries[qid]
                         passage = args.collection_dict[str(pid)]
                         # print(i, score, pid, passage)
-                        extractive_answer(question, passage, reader_model, reader_tokenizer)
+                        answer, answer_start, answer_start_prob, answer_end, answer_end_prob = extractive_answer(question, passage, reader_model, reader_tokenizer)
+                        print(f"\nRANK: {j}")
+                        print(f"Question: {question}")
+                        print(f"Context: {passage}")
+                        print(f"Answer: {answer}")
+                        print()
+
 
     print('\n\n')
     print(ranking_logger.filename)

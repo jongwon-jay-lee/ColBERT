@@ -6,7 +6,7 @@ import torch
 QA_BERT_LARGE_UNCASED = "bert-large-uncased-whole-word-masking-finetuned-squad"
 
 
-def load_model(args):
+def load_extractive_reader(args):
     if not hasattr(args, "model_type_or_path"):
         args.model_type_or_path = QA_BERT_LARGE_UNCASED
     tokenizer = AutoTokenizer.from_pretrained(args.model_type_or_path)
@@ -41,14 +41,15 @@ def extractive_answer(question, text, model, tokenizer):
     answer_end_scores = outputs.end_logits
 
     answer_start = torch.argmax(answer_start_scores)
-    answer_end = torch.argmax(answer_end_scores) + 1
+    answer_start_prob = torch.nn.Softmax(answer_start_scores, dim=-1)
+    answer_end = torch.argmax(answer_end_scores)
+    answer_end_prob = torch.nn.Softmax(answer_end_scores, dim=-1)
+    
 
     answer = tokenizer.convert_tokens_to_string(
-        tokenizer.convert_ids_to_tokens(input_ids[answer_start:answer_end])
+        tokenizer.convert_ids_to_tokens(input_ids[answer_start:answer_end+1])
     )
-    print(f"Question: {question}")
-    print(f"Context: {text}")
-    print(f"Answer: {answer}")
+    return answer, answer_start, answer_start_prob, answer_end, answer_end_prob
 
 
 def main():
@@ -62,12 +63,15 @@ def main():
     """
     args = parser.parse_args()
 
-    model, tokenizer = load_model(args)
+    model, tokenizer = load_extractive_reader(args)
     text, questions = get_qa()
 
     for question in questions:
-        extractive_answer(question, text, model, tokenizer)
+        answer, answer_start, answer_start_prob, answer_end, answer_end_prob = extractive_answer(question, text, model, tokenizer)
+        
         print("-" * 50)
+        print(question)
+        print(answer)
 
 
 if __name__ == "__main__":
