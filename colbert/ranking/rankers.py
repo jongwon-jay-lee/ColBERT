@@ -27,7 +27,7 @@ class Ranker():
 
     def rank(self, Q, pids=None):
         # retrieve relative passages
-        pids = self.retrieve(Q, verbose=False)[0] if pids is None else pids
+        pids = self.retrieve(Q, verbose=False)[0] if pids is None else pids     # get all relevant docs
         assert type(pids) in [list, tuple], type(pids)
         assert Q.size(0) == 1, (len(pids), Q.size())
         assert all(type(pid) is int for pid in pids)
@@ -35,7 +35,7 @@ class Ranker():
         scores = []
         if len(pids) > 0:
             Q = Q.permute(0, 2, 1)
-            scores = self.index.rank(Q, pids)
+            scores = self.index.rank(Q, pids)       # now rank the relevant docs
 
             scores_sorter = torch.tensor(scores).sort(descending=True)
             pids, scores = torch.tensor(pids)[scores_sorter.indices].tolist(), scores_sorter.values.tolist()

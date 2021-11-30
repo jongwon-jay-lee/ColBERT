@@ -23,6 +23,7 @@ class IndexPart():
         # Load doclens metadata
         all_doclens = load_doclens(directory, flatten=False)
 
+        # accumulate the len(part_doclens)
         self.doc_offset = sum([len(part_doclens) for part_doclens in all_doclens[:first_part]])
         self.doc_endpos = sum([len(part_doclens) for part_doclens in all_doclens[:last_part]])
         self.pids_range = range(self.doc_offset, self.doc_endpos)
@@ -35,7 +36,10 @@ class IndexPart():
         self.ranker = IndexRanker(self.tensor, self.doclens)
 
     def _load_parts(self, dim, verbose):
-        tensor = torch.zeros(self.num_embeddings + 512, dim, dtype=torch.float16)
+        # TODO jw : declare a tensor with a size of
+        # -> (sum of the length of this part, dim)
+        # mostly the part == all docs, since part_range is (0, None)
+        tensor = torch.zeros(self.num_embeddings + 512, dim, dtype=torch.float16)   # 512 is buffer
 
         if verbose:
             print_message("tensor.size() = ", tensor.size())

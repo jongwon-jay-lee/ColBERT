@@ -15,7 +15,7 @@ BSIZE = 1 << 9
 
 class IndexRanker():
     def __init__(self, tensor, doclens):
-        self.tensor = tensor
+        self.tensor = tensor        # (num_tokens, col_dim)
         self.doclens = doclens
 
         self.maxsim_dtype = torch.float32
@@ -26,8 +26,8 @@ class IndexRanker():
 
         self.dim = self.tensor.size(-1)
 
-        self.strides = [torch_percentile(self.doclens, p) for p in [90]]
-        self.strides.append(self.doclens.max().item())
+        self.strides = [torch_percentile(self.doclens, p) for p in [90]]    # get a len that meets 90% of doclens
+        self.strides.append(self.doclens.max().item())                      # append maxlen
         self.strides = sorted(list(set(self.strides)))
 
         print_message(f"#> Using strides {self.strides}..")
@@ -78,7 +78,7 @@ class IndexRanker():
         output_pids, output_scores, output_permutation = [], [], []
 
         for group_idx, stride in enumerate(self.strides):
-            locator = (assignments == group_idx)
+            locator = (assignments == group_idx)    # 1) select passages whose len is <= L (90%), 2) rest of passages
 
             if locator.sum() < 1e-5:
                 continue
@@ -87,18 +87,18 @@ class IndexRanker():
             group_Q = Q if Q.size(0) == 1 else Q[locator]
 
             group_offsets = group_offsets.to(VIEWS_DEVICE) - shift
-            group_offsets_uniq, group_offsets_expand = torch.unique_consecutive(group_offsets, return_inverse=True)
-
+            group_offsets_uniq, group_offsets_expand = torch.unique_consecutive(group_offsets, return_inverse=True)     # remove empty pid
+            # Access Documents
             D_size = group_offsets_uniq.size(0)
-            D = torch.index_select(views[group_idx], 0, group_offsets_uniq, out=D_buffers[group_idx][:D_size])
+            D = torch.index_select(views[group_idx], 0, group_offsets_uniq, out=D_buffers[group_idx][:D_size])  # (D_size, stride, col_dim)
             D = D.to(DEVICE)
-            D = D[group_offsets_expand.to(DEVICE)].to(dtype=self.maxsim_dtype)
+            D = D[group_offsets_expand.to(DEVICE)].to(dtype=self.maxsim_dtype)      # float16 -> float32
 
             mask = torch.arange(stride, device=DEVICE) + 1
-            mask = mask.unsqueeze(0) <= group_doclens.to(DEVICE).unsqueeze(-1)
+            mask = mask.unsqueeze(0) <= group_doclens.to(DEVICE).unsqueeze(-1)  # doc_mask : (D_size, stride)
 
-            scores = (D @ group_Q) * mask.unsqueeze(-1)
-            scores = scores.max(1).values.sum(-1).cpu()
+            scores = (D @ group_Q) * mask.unsqueeze(-1)     # (D_size, stride, q_len)
+            scores = scores.max(1).values.sum(-1).cpu()     # (D_size)
 
             output_pids.append(group_pids)
             output_scores.append(scores)
@@ -106,7 +106,7 @@ class IndexRanker():
 
         output_permutation = torch.cat(output_permutation).sort().indices
         output_pids = torch.cat(output_pids)[output_permutation].tolist()
-        output_scores = torch.cat(output_scores)[output_permutation].tolist()
+        output_scores = torch.cat(output_scores)[output_permutation].tolist()   # sort score not by score-scale but by pid order
 
         assert len(raw_pids) == len(output_pids)
         assert len(raw_pids) == len(output_scores)
